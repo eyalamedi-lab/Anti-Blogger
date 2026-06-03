@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מחולל מאמרים AI</title>
+    <!-- Google Fonts: Assistant for Hebrew, Outfit for interface accents -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Marked.js for clean Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Supabase JS Client library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- FontAwesome for modern icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-gradient: radial-gradient(circle at 50% 50%, #17112d, #080512);
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --card-hover-border: rgba(129, 140, 248, 0.4);
+            
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.35);
+            --secondary: #a855f7;
+            --secondary-glow: rgba(168, 85, 247, 0.35);
+            
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --text-accent: #818cf8;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Assistant', sans-serif;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            overflow-x: hidden;
+        }
+
+        /* Container Layout */
+        .app-container {
+            display: flex;
+            width: 100%;
+            max-width: 1600px;
+            margin: 0 auto;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styling (History & API Settings) */
+        aside {
+            width: 380px;
+            background: rgba(8, 5, 18, 0.6);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid var(--card-border);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-family: 'Outfit', 'Assistant', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--text-main), var(--text-accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-section i {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 1.8rem;
+        }
+
+        .config-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .config-card:focus-within {
+            border-color: var(--card-hover-border);
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.1);
+        }
+
+        .config-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .input-group label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .input-style {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: var(--text-main);
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        .input-style:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-glow);
+        }
+
+        .btn-save {
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.6rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-save:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        /* History Section */
+        .history-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-header h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            overflow-y: auto;
+            flex-grow: 1;
+            padding-left: 0.25rem;
+        }
+
+        /* Custom Scrollbar */
+        .history-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .history-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .history-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        .history-list::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .history-item {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 1rem;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .history-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 3px;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--primary), var(--secondary));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .history-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateX(-4px);
+        }
+
+        .history-item.active {
+            background: rgba(99, 102, 241, 0.05);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .history-item.active::before {
+            opacity: 1;
+        }
+
+        .history-item-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding-left: 1.5rem;
+        }
+
+        .history-item-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .btn-delete {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: color 0.2s ease;
+            position: absolute;
+            left: 1rem;
+            top: 1rem;
+            z-index: 2;
+        }
+
+        .btn-delete:hover {
+            color: var(--danger);
+        }
+
+        /* Main Workspace */
+        main {
+            flex-grow: 1;
+            padding: 3rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2.5rem;
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+
+        .main-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .main-header h1 {
+            font-size: 2.25rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff, #c7d2fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Generation Box */
+        .workspace-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 2rem;
+            backdrop-filter: blur(16px);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            position: relative;
+        }
+
+        .workspace-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 24px;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        .textarea-container {
+            position: relative;
+        }
+
+        textarea.input-style {
+            min-height: 120px;
+            resize: vertical;
+            font-size: 1.05rem;
+            line-height: 1.6;
+        }
+
+        .btn-generate {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            box-shadow: 0 4px 20px var(--primary-glow);
+            align-self: flex-start;
+        }
+
+        .btn-generate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(168, 85, 247, 0.5);
+        }
+
+        .btn-generate:active {
+            transform: translateY(0);
+        }
+
+        .btn-generate:disabled {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Output & Reader Panel */
+        .output-panel {
+            background: rgba(255, 255, 255, 0.015);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 2.5rem;
+            display: none; /* Shown dynamically */
+            flex-direction: column;
+            gap: 1.5rem;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .output-header {
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .output-meta {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .output-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .output-title {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--text-main);
+            line-height: 1.3;
+        }
+
+        .output-body {
+            font-size: 1.15rem;
+            line-height: 1.8;
+            color: #d1d5db;
+            text-align: justify;
+        }
+
+        /* Render Markdown Styles beautifully */
+        .output-body p {
+            margin-bottom: 1.5rem;
+        }
+
+        .output-body h2, .output-body h3 {
+            color: var(--text-main);
+            margin: 2rem 0 1rem 0;
+            font-weight: 700;
+        }
+
+        .output-body h2 {
+            font-size: 1.5rem;
+            border-right: 4px solid var(--primary);
+            padding-right: 0.75rem;
+        }
+
+        .output-body h3 {
+            font-size: 1.25rem;
+        }
+
+        .output-actions {
+            display: flex;
+            gap: 1rem;
+            border-top: 1px solid var(--card-border);
+            padding-top: 1.5rem;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            border-radius: 8px;
+            padding: 0.6rem 1.25rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Success & Floating Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 2rem;
+            background: rgba(16, 185, 129, 0.95);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transform: translateY(150%);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 100;
+            font-weight: 600;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+        }
+
+        /* Shimmer Loading Skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+            background-size: 200% 100%;
+            animation: loading-shimmer 1.5s infinite;
+            border-radius: 4px;
+        }
+
+        @keyframes loading-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .loading-skeleton {
+            display: none; /* Shown during load */
+            flex-direction: column;
+            gap: 1.5rem;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 2.5rem;
+        }
+
+        .skeleton-title {
+            height: 35px;
+            width: 60%;
+        }
+
+        .skeleton-meta {
+            height: 15px;
+            width: 30%;
+        }
+
+        .skeleton-line {
+            height: 18px;
+            width: 100%;
+        }
+
+        .skeleton-line.short {
+            width: 80%;
+        }
+
+        /* Warning Banner */
+        .api-warning {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            padding: 1rem;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- Sidebar -->
+        <aside>
+            <div class="logo-section">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>Blogger AI</span>
+            </div>
+
+            <!-- API Configuration -->
+            <div class="config-card">
+                <h3><i class="fa-solid fa-gears"></i> הגדרות מחולל</h3>
+                <div class="input-group">
+                    <label for="api-key">Gemini API Key</label>
+                    <input type="password" id="api-key" class="input-style" placeholder="הכנס מפתח API...">
+                </div>
+                <div class="input-group">
+                    <label for="api-model">מודל AI</label>
+                    <select id="api-model" class="input-style" style="background: rgba(0, 0, 0, 0.3); border: 1px solid var(--card-border); color: var(--text-main);">
+                        <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash (יציב)</option>
+                        <option value="gemini-3.5-flash">Gemini 3.5 Flash (הכי חדש)</option>
+                    </select>
+                </div>
+                <button class="btn-save" id="btn-save-key">
+                    <i class="fa-solid fa-floppy-disk"></i> שמור הגדרות
+                </button>
+            </div>
+
+            <!-- Supabase Configuration -->
+            <div class="config-card">
+                <h3><i class="fa-solid fa-cloud"></i> חיבור ל-Supabase (אופציונלי)</h3>
+                <div class="input-group">
+                    <label for="supabase-url">Supabase URL</label>
+                    <input type="text" id="supabase-url" class="input-style" placeholder="https://xyz.supabase.co">
+                </div>
+                <div class="input-group">
+                    <label for="supabase-key">Supabase Anon Key</label>
+                    <input type="password" id="supabase-key" class="input-style" placeholder="הכנס Anon Key...">
+                </div>
+                <button class="btn-save" id="btn-save-supabase" style="background: linear-gradient(135deg, #10b981, #059669);">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> שמור חיבור ענן
+                </button>
+            </div>
+
+            <!-- History Section -->
+            <div class="history-section">
+                <div class="history-header">
+                    <h3><i class="fa-solid fa-clock-rotate-left"></i> היסטוריית מאמרים</h3>
+                </div>
+                <div class="history-list" id="history-list">
+                    <!-- Loaded dynamically -->
+                    <div style="text-align: center; color: var(--text-muted); padding: 2rem 0; font-size: 0.9rem;">
+                        אין מאמרים שמורים עדיין.
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Panel -->
+        <main>
+            <div class="main-header">
+                <h1>מחולל מאמרים</h1>
+            </div>
+
+            <!-- API Warning -->
+            <div class="api-warning" id="api-key-warning" style="display: none;">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>מפתח Gemini API אינו מוגדר. אנא הגדר ושמור את המפתח בסרגל הצד כדי להתחיל.</span>
+            </div>
+
+            <!-- Workspace Card -->
+            <div class="workspace-card">
+                <div class="input-group">
+                    <label style="font-size: 1.1rem; font-weight: 600;" for="prompt-input">רעיון או נושא למאמר</label>
+                    <textarea id="prompt-input" class="input-style" placeholder="לדוגמה: כיצד בינה מלאכותית תשנה את עולם הרפואה בעשור הקרוב..."></textarea>
+                </div>
+                <button class="btn-generate" id="btn-generate">
+                    <i class="fa-solid fa-gears"></i> ייצר מאמר
+                </button>
+                <!-- Persistent Error Box -->
+                <div id="error-box" class="api-warning" style="display: none; margin-top: 1rem; background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3);">
+                    <i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;"></i>
+                    <span id="error-box-text" style="color: #fca5a5; font-weight: 600;"></span>
+                </div>
+            </div>
+
+            <!-- Loading Shimmer Skeleton -->
+            <div class="loading-skeleton" id="loading-skeleton">
+                <div class="skeleton skeleton-title"></div>
+                <div class="skeleton skeleton-meta"></div>
+                <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                    <div class="skeleton skeleton-line"></div>
+                    <div class="skeleton skeleton-line"></div>
+                    <div class="skeleton skeleton-line"></div>
+                    <div class="skeleton skeleton-line short"></div>
+                </div>
+            </div>
+
+            <!-- Generated Output Display -->
+            <div class="output-panel" id="output-panel">
+                <div class="output-header">
+                    <div class="output-meta">
+                        <span id="meta-words"><i class="fa-solid fa-file-word"></i> 0 מילים</span>
+                        <span id="meta-read-time"><i class="fa-solid fa-clock"></i> 0 דק' קריאה</span>
+                        <span id="meta-db-status" style="color: var(--success);"><i class="fa-solid fa-cloud-arrow-up"></i> נשמר במסד הנתונים</span>
+                    </div>
+                    <h2 class="output-title" id="output-title">כותרת המאמר תופיע כאן</h2>
+                </div>
+                <div class="output-body" id="output-body">
+                    <!-- Markdown article body -->
+                </div>
+                <div class="output-actions">
+                    <button class="btn-secondary" id="btn-copy">
+                        <i class="fa-solid fa-copy"></i> העתק מאמר
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast" style="cursor: pointer;" onclick="this.classList.remove('show')">
+        <i class="fa-solid fa-circle-check"></i>
+        <span id="toast-text">הפעולה הושלמה בהצלחה!</span>
+    </div>
+
+    <script>
+        // API Base URL (relative since we run on the same server)
+        const API_BASE = window.location.origin;
+        let selectedArticleId = null;
+
+        // UI Selectors
+        const apiKeyInput = document.getElementById('api-key');
+        const btnSaveKey = document.getElementById('btn-save-key');
+        const apiKeyWarning = document.getElementById('api-key-warning');
+        const apiModelSelect = document.getElementById('api-model');
+        
+        const promptInput = document.getElementById('prompt-input');
+        const btnGenerate = document.getElementById('btn-generate');
+        const loadingSkeleton = document.getElementById('loading-skeleton');
+        const outputPanel = document.getElementById('output-panel');
+        
+        const outputTitle = document.getElementById('output-title');
+        const outputBody = document.getElementById('output-body');
+        const metaWords = document.getElementById('meta-words');
+        const metaReadTime = document.getElementById('meta-read-time');
+        const metaDbStatus = document.getElementById('meta-db-status');
+        
+        const btnCopy = document.getElementById('btn-copy');
+        const historyList = document.getElementById('history-list');
+        const toast = document.getElementById('toast');
+        const toastText = document.getElementById('toast-text');
+        const errorBox = document.getElementById('error-box');
+        const errorBoxText = document.getElementById('error-box-text');
+        const supabaseUrlInput = document.getElementById('supabase-url');
+        const supabaseKeyInput = document.getElementById('supabase-key');
+        const btnSaveSupabase = document.getElementById('btn-save-supabase');
+
+        // Check if API Key and Supabase Config exist in localStorage on startup
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedKey = localStorage.getItem('gemini_api_key');
+            const savedModel = localStorage.getItem('gemini_api_model');
+            const savedSupaUrl = localStorage.getItem('supabase_url');
+            const savedSupaKey = localStorage.getItem('supabase_key');
+            
+            if (savedKey) {
+                apiKeyInput.value = savedKey;
+                apiKeyWarning.style.display = 'none';
+            } else {
+                apiKeyWarning.style.display = 'flex';
+            }
+            if (savedModel) {
+                apiModelSelect.value = savedModel;
+            }
+            if (savedSupaUrl) {
+                supabaseUrlInput.value = savedSupaUrl;
+            }
+            if (savedSupaKey) {
+                supabaseKeyInput.value = savedSupaKey;
+            }
+            loadHistory();
+        });
+
+        // Save API Key Action
+        btnSaveKey.addEventListener('click', () => {
+            const key = apiKeyInput.value.trim();
+            const model = apiModelSelect.value;
+            
+            localStorage.setItem('gemini_api_model', model);
+            
+            if (key) {
+                localStorage.setItem('gemini_api_key', key);
+                apiKeyWarning.style.display = 'none';
+                showToast('ההגדרות נשמרו בהצלחה!');
+            } else {
+                localStorage.removeItem('gemini_api_key');
+                apiKeyWarning.style.display = 'flex';
+                showToast('ההגדרות נשמרו, מפתח ה-API הוסר.', true);
+            }
+        });
+
+        // Save Supabase Configuration Action
+        btnSaveSupabase.addEventListener('click', () => {
+            const url = supabaseUrlInput.value.trim();
+            const key = supabaseKeyInput.value.trim();
+            
+            if (url && key) {
+                localStorage.setItem('supabase_url', url);
+                localStorage.setItem('supabase_key', key);
+                showToast('חיבור ה-Supabase נשמר בהצלחה!');
+            } else {
+                localStorage.removeItem('supabase_url');
+                localStorage.removeItem('supabase_key');
+                showToast('חיבור ה-Supabase הוסר. עובר למצב מקומי (SQLite).', true);
+            }
+            loadHistory();
+        });
+
+        // Supabase Client Initializer Helper
+        let supabaseClient = null;
+        function getSupabaseClient() {
+            const url = (localStorage.getItem('supabase_url') || '').trim();
+            const key = (localStorage.getItem('supabase_key') || '').trim();
+            if (url && key) {
+                if (!supabaseClient || supabaseClient.supabaseUrl !== url) {
+                    supabaseClient = supabase.createClient(url, key);
+                }
+                return supabaseClient;
+            }
+            return null;
+        }
+
+        // Show toast helper
+        let toastTimeout;
+        function showToast(message, isWarning = false) {
+            clearTimeout(toastTimeout);
+            toastText.textContent = message;
+            toast.style.background = isWarning ? 'rgba(239, 68, 68, 0.95)' : 'rgba(16, 185, 129, 0.95)';
+            toast.style.boxShadow = isWarning ? '0 10px 25px rgba(239, 68, 68, 0.3)' : '0 10px 25px rgba(16, 185, 129, 0.3)';
+            
+            // Set dynamic icon
+            const icon = toast.querySelector('i');
+            if (isWarning) {
+                icon.className = 'fa-solid fa-circle-exclamation';
+            } else {
+                icon.className = 'fa-solid fa-circle-check';
+            }
+
+            toast.classList.add('show');
+            
+            const duration = isWarning ? 15000 : 3000;
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, duration);
+        }
+
+        function showError(message) {
+            errorBoxText.textContent = message;
+            errorBox.style.display = 'flex';
+            showToast(message, true);
+        }
+
+        // Calculate Reading Time & Words
+        function updateMeta(text) {
+            const words = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+            const readTime = Math.ceil(words / 150); // average 150 words per minute in Hebrew
+            metaWords.innerHTML = `<i class="fa-solid fa-file-word"></i> ${words} מילים`;
+            metaReadTime.innerHTML = `<i class="fa-solid fa-clock"></i> ${readTime} דק' קריאה`;
+        }
+
+        // Copy to clipboard Action
+        btnCopy.addEventListener('click', () => {
+            const textToCopy = `${outputTitle.innerText}\n\n${outputBody.innerText}`;
+            navigator.clipboard.writeText(textToCopy)
+                .then(() => showToast('המאמר הועתק ללוח!'))
+                .catch(() => showToast('שגיאה בהעתקת המאמר.', true));
+        });
+
+        // Load History from active database (Supabase or local SQLite)
+        function loadHistory() {
+            const client = getSupabaseClient();
+            if (client) {
+                // Cloud Mode (Supabase)
+                client.from('articles').select('*').order('created_at', { ascending: false })
+                    .then(({ data, error }) => {
+                        if (error) throw error;
+                        renderHistory(data);
+                    })
+                    .catch(err => {
+                        showToast('שגיאה בטעינת היסטוריה מ-Supabase: ' + err.message, true);
+                        console.error(err);
+                    });
+            } else {
+                // Local Mode (SQLite)
+                fetch(`${API_BASE}/api/articles`)
+                    .then(res => res.json())
+                    .then(data => {
+                        renderHistory(data);
+                    })
+                    .catch(err => console.error('Error fetching history:', err));
+            }
+        }
+
+        // Render history list items
+        function renderHistory(articles) {
+            if (!articles || articles.length === 0) {
+                historyList.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 2rem 0; font-size: 0.9rem;">אין מאמרים שמורים עדיין.</div>`;
+                return;
+            }
+
+            historyList.innerHTML = '';
+            articles.forEach(art => {
+                const date = new Date(art.created_at + 'Z'); // Parse as UTC
+                const localDateStr = date.toLocaleDateString('he-IL') + ' ' + date.toLocaleTimeString('he-IL', {hour: '2-digit', minute:'2-digit'});
+
+                const div = document.createElement('div');
+                div.className = `history-item ${selectedArticleId === art.id ? 'active' : ''}`;
+                div.setAttribute('data-id', art.id);
+                
+                div.innerHTML = `
+                    <div class="history-item-title">${art.title}</div>
+                    <div class="history-item-meta">
+                        <span><i class="fa-regular fa-calendar"></i> ${localDateStr}</span>
+                    </div>
+                    <button class="btn-delete" title="מחק מאמר">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                `;
+
+                // Load article click event
+                div.addEventListener('click', (e) => {
+                    if (e.target.closest('.btn-delete')) return; // ignore delete click
+                    selectArticle(art);
+                });
+
+                // Delete article click event
+                const deleteBtn = div.querySelector('.btn-delete');
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteArticle(art.id);
+                });
+
+                historyList.appendChild(div);
+            });
+        }
+
+        // View existing article from history
+        function selectArticle(art) {
+            selectedArticleId = art.id;
+            
+            // Toggle active classes
+            document.querySelectorAll('.history-item').forEach(item => {
+                item.classList.toggle('active', item.getAttribute('data-id') === art.id);
+            });
+
+            // Populate Output
+            outputTitle.innerText = art.title;
+            outputBody.innerHTML = marked.parse(art.article);
+            updateMeta(art.article);
+            
+            metaDbStatus.style.display = 'inline-flex';
+            metaDbStatus.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> נטען ממסד הנתונים`;
+            
+            outputPanel.style.display = 'flex';
+            outputPanel.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Delete article
+        function deleteArticle(id) {
+            if (!confirm('האם אתה בטוח שברצונך למחוק מאמר זה ממסד הנתונים?')) return;
+
+            const client = getSupabaseClient();
+            if (client) {
+                // Cloud Mode (Supabase)
+                client.from('articles').delete().eq('id', id)
+                    .then(({ error }) => {
+                        if (error) throw error;
+                        showToast('המאמר נמחק מ-Supabase בהצלחה!');
+                        if (selectedArticleId === id) {
+                            outputPanel.style.display = 'none';
+                            selectedArticleId = null;
+                        }
+                        loadHistory();
+                    })
+                    .catch(err => {
+                        showError('מחיקה מ-Supabase נכשלה: ' + err.message);
+                    });
+            } else {
+                // Local Mode (SQLite)
+                fetch(`${API_BASE}/api/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('המאמר נמחק בהצלחה!');
+                        if (selectedArticleId === id) {
+                            outputPanel.style.display = 'none';
+                            selectedArticleId = null;
+                        }
+                        loadHistory();
+                    } else {
+                        showToast('מחיקת המאמר נכשלה: ' + data.error, true);
+                    }
+                })
+                .catch(err => {
+                    showToast('שגיאת רשת במחיקת המאמר.', true);
+                    console.error(err);
+                });
+            }
+        }
+
+        // Generate Article Action (Internal Agent)
+        btnGenerate.addEventListener('click', async () => {
+            const prompt = promptInput.value.trim();
+            const apiKey = (localStorage.getItem('gemini_api_key') || '').trim();
+
+            // Clear previous errors
+            errorBox.style.display = 'none';
+
+            // Validations
+            if (!apiKey) {
+                showError('אנא הגדר מפתח API תחילה!');
+                apiKeyWarning.style.display = 'flex';
+                apiKeyInput.focus();
+                return;
+            }
+
+            if (!prompt) {
+                showError('נא להזין נושא או רעיון למאמר.');
+                promptInput.focus();
+                return;
+            }
+
+            // UI State updates
+            btnGenerate.disabled = true;
+            outputPanel.style.display = 'none';
+            loadingSkeleton.style.display = 'flex';
+            loadingSkeleton.scrollIntoView({ behavior: 'smooth' });
+
+            try {
+                // INTERNAL AGENT: Execute generative call
+                const model = localStorage.getItem('gemini_api_model') || 'gemini-2.5-flash';
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: `עבור הרעיון או הנושא הבא: '${prompt}', פעל כסוכן כתיבה מומחה וייצר מאמר מפורט ומקצועי בעברית.
+                                המאמר חייב להיות בן 800 מילים לפחות.
+                                פלט התגובה שלך חייב להיות בפורמט JSON בלבד ומובנה בדיוק עם המפתחות הבאים:
+                                1. "title": כותרת קליטה, מושכת ומסקרנת למאמר בעברית.
+                                2. "article": גוף המאמר המפורט בעברית הכולל כותרות משנה וחלוקה לפסקאות בפורמט Markdown.
+                                אל תעטוף את ה-JSON בתגיות קוד (כגון \`\`\`json), החזר מחרוזת JSON נקייה וחלקה בלבד.`
+                            }]
+                        }],
+                        generationConfig: {
+                            responseMimeType: "application/json"
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.error?.message || 'שגיאה בקריאת ה-API של Gemini');
+                }
+
+                const result = await response.json();
+                const rawText = result.candidates[0].content.parts[0].text;
+                
+                // Clean and parse JSON response robustly
+                let cleanText = rawText.trim();
+                if (cleanText.startsWith('```')) {
+                    cleanText = cleanText.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```$/, '').trim();
+                }
+
+                let articleData;
+                try {
+                    articleData = JSON.parse(cleanText);
+                } catch (e) {
+                    // Fallback: extract substring between first { and last }
+                    const startIdx = cleanText.indexOf('{');
+                    const endIdx = cleanText.lastIndexOf('}');
+                    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+                        try {
+                            articleData = JSON.parse(cleanText.substring(startIdx, endIdx + 1));
+                        } catch (innerErr) {
+                            throw new Error("שגיאה בפענוח ה-JSON: " + innerErr.message);
+                        }
+                    } else {
+                        throw new Error("לא נמצא אובייקט JSON תקין בתשובה: " + e.message);
+                    }
+                }
+
+                const generatedTitle = articleData.title;
+                const generatedArticle = articleData.article;
+
+                // Show Generated Result in UI
+                outputTitle.innerText = generatedTitle;
+                outputBody.innerHTML = marked.parse(generatedArticle);
+                updateMeta(generatedArticle);
+                metaDbStatus.style.display = 'inline-flex';
+                metaDbStatus.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> שומר במסד הנתונים...`;
+
+                loadingSkeleton.style.display = 'none';
+                outputPanel.style.display = 'flex';
+                outputPanel.scrollIntoView({ behavior: 'smooth' });
+
+                // AUTOMATICALLY SAVE TO DATABASE
+                saveArticle(prompt, generatedTitle, generatedArticle);
+
+            } catch (err) {
+                loadingSkeleton.style.display = 'none';
+                btnGenerate.disabled = false;
+                showError('שגיאה בייצור המאמר: ' + err.message);
+                console.error(err);
+            }
+        });
+
+        // Database Persistence (Supabase Cloud or SQLite Local)
+        function saveArticle(prompt, title, article) {
+            const client = getSupabaseClient();
+            if (client) {
+                // Cloud Mode (Supabase)
+                client.from('articles').insert([{ prompt, title, article }]).select()
+                    .then(({ data, error }) => {
+                        if (error) throw error;
+                        metaDbStatus.style.color = 'var(--success)';
+                        metaDbStatus.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> נשמר בהצלחה בענן Supabase`;
+                        showToast('המאמר נוצר ונשמר ב-Supabase!');
+                        loadHistory(); // Refresh history sidebar
+                    })
+                    .catch(err => {
+                        metaDbStatus.style.color = 'var(--danger)';
+                        metaDbStatus.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> השמירה בענן נכשלה`;
+                        showError('השמירה ב-Supabase נכשלה: ' + err.message);
+                    })
+                    .finally(() => {
+                        btnGenerate.disabled = false;
+                    });
+            } else {
+                // Local Mode (SQLite)
+                fetch(`${API_BASE}/api/save`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt, title, article })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        metaDbStatus.style.color = 'var(--success)';
+                        metaDbStatus.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> נשמר בהצלחה במסד המקומי`;
+                        showToast('המאמר נוצר ונשמר בהצלחה!');
+                        loadHistory(); // Refresh history sidebar
+                    } else {
+                        metaDbStatus.style.color = 'var(--danger)';
+                        metaDbStatus.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> השמירה נכשלה`;
+                        showError('השמירה המקומית נכשלה: ' + data.error);
+                    }
+                })
+                .catch(err => {
+                    metaDbStatus.style.color = 'var(--danger)';
+                    metaDbStatus.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> שגיאת שרת`;
+                    showError('שגיאה בחיבור לשרת השמירה המקומי.');
+                    console.error(err);
+                })
+                .finally(() => {
+                    btnGenerate.disabled = false;
+                });
+            }
+        }
+    </script>
+</body>
+</html>
